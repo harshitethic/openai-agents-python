@@ -144,10 +144,10 @@ class STTModelSettings:
     """The language of the audio input."""
 
     temperature: float | None = None
-    """The temperature of the audio input."""
+    """The temperature of the model."""
 
     turn_detection: dict[str, Any] | None = None
-    """The turn detection settings for the voice pipeline."""
+    """The turn detection settings for the model when using streamed audio input."""
 
     languages: list[str] | None = field(default=None, kw_only=True)
     """Possible languages of the audio input, expressed as API-supported language codes, when
