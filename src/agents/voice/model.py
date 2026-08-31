@@ -87,6 +87,12 @@ class TTSModelSettings:
     speed: float | None = None
     """The speed with which the TTS model will read the text. Between 0.25 and 4.0."""
 
+    def __post_init__(self) -> None:
+        # Configurations loaded from JSON/YAML commonly represent NumPy dtypes as strings.
+        # Normalize those spellings once at the settings boundary so downstream consumers can
+        # compare against the supported NumPy dtypes consistently.
+        self.dtype = np.dtype(self.dtype)
+
 
 class TTSModel(abc.ABC):
     """A text-to-speech model that can convert text into audio output."""
@@ -177,54 +183,19 @@ class STTModel(abc.ABC):
             settings: The settings to use for the transcription.
             trace_include_sensitive_data: Whether to include sensitive data in traces.
             trace_include_sensitive_audio_data: Whether to include sensitive audio data in traces.
-
-        Returns:
-            The text transcription of the audio input.
-        """
-        pass
-
-    @abc.abstractmethod
-    async def create_session(
-        self,
-        input: StreamedAudioInput,
-        settings: STTModelSettings,
-        trace_include_sensitive_data: bool,
-        trace_include_sensitive_audio_data: bool,
-    ) -> StreamedTranscriptionSession:
-        """Creates a new transcription session, which you can push audio to, and receive a stream
-        of text transcriptions.
-
-        Args:
-            input: The audio input to transcribe.
-            settings: The settings to use for the transcription.
-            trace_include_sensitive_data: Whether to include sensitive data in traces.
-            trace_include_sensitive_audio_data: Whether to include sensitive audio data in traces.
-
-        Returns:
-            A new transcription session.
         """
         pass
 
 
 class VoiceModelProvider(abc.ABC):
-    """The base interface for a voice model provider.
-
-    A model provider is responsible for creating speech-to-text and text-to-speech models, given a
-    name.
-    """
+    """A provider for voice models."""
 
     @abc.abstractmethod
-    def get_stt_model(self, model_name: str | None) -> STTModel:
-        """Get a speech-to-text model by name.
-
-        Args:
-            model_name: The name of the model to get.
-
-        Returns:
-            The speech-to-text model.
-        """
+    def get_stt_model(self, model_name: str | None = None) -> STTModel:
+        """Get an STT model."""
         pass
 
     @abc.abstractmethod
-    def get_tts_model(self, model_name: str | None) -> TTSModel:
-        """Get a text-to-speech model by name."""
+    def get_tts_model(self, model_name: str | None = None) -> TTSModel:
+        """Get a TTS model."""
+        pass
