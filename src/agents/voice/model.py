@@ -144,10 +144,10 @@ class STTModelSettings:
     """The language of the audio input."""
 
     temperature: float | None = None
-    """The temperature of the model."""
+    """The temperature of the audio input."""
 
     turn_detection: dict[str, Any] | None = None
-    """The turn detection settings for the model when using streamed audio input."""
+    """The turn detection settings for the voice pipeline."""
 
     languages: list[str] | None = field(default=None, kw_only=True)
     """Possible languages of the audio input, expressed as API-supported language codes, when
@@ -183,19 +183,55 @@ class STTModel(abc.ABC):
             settings: The settings to use for the transcription.
             trace_include_sensitive_data: Whether to include sensitive data in traces.
             trace_include_sensitive_audio_data: Whether to include sensitive audio data in traces.
+
+        Returns:
+            The text transcription of the audio input.
+        """
+        pass
+
+    @abc.abstractmethod
+    async def create_session(
+        self,
+        input: StreamedAudioInput,
+        settings: STTModelSettings,
+        trace_include_sensitive_data: bool,
+        trace_include_sensitive_audio_data: bool,
+    ) -> StreamedTranscriptionSession:
+        """Creates a new transcription session, which you can push audio to, and receive a stream
+        of text transcriptions.
+
+        Args:
+            input: The audio input to transcribe.
+            settings: The settings to use for the transcription.
+            trace_include_sensitive_data: Whether to include sensitive data in traces.
+            trace_include_sensitive_audio_data: Whether to include sensitive audio data in traces.
+
+        Returns:
+            A new transcription session.
         """
         pass
 
 
 class VoiceModelProvider(abc.ABC):
-    """A provider for voice models."""
+    """The base interface for a voice model provider.
+
+    A model provider is responsible for creating speech-to-text and text-to-speech models, given a
+    name.
+    """
 
     @abc.abstractmethod
-    def get_stt_model(self, model_name: str | None = None) -> STTModel:
-        """Get an STT model."""
+    def get_stt_model(self, model_name: str | None) -> STTModel:
+        """Get a speech-to-text model by name.
+
+        Args:
+            model_name: The name of the model to get.
+
+        Returns:
+            The speech-to-text model.
+        """
         pass
 
     @abc.abstractmethod
-    def get_tts_model(self, model_name: str | None = None) -> TTSModel:
-        """Get a TTS model."""
+    def get_tts_model(self, model_name: str | None) -> TTSModel:
+        """Get a text-to-speech model by name."""
         pass
