@@ -106,6 +106,14 @@ async def gather_with_cancel(
             if on_child_failure is not None:
                 on_child_failure()
             raise
+    except GeneratorExit:
+        # Coroutine finalization cannot suspend. Let the owner tearing down this
+        # coroutine decide what to do with child tasks rather than awaiting cleanup.
+        raise
+    except GeneratorExit:
+        # Coroutine finalization cannot suspend. Let the owner tearing down this
+        # coroutine decide what to do with child tasks rather than awaiting cleanup.
+        raise
     except BaseException:
         for task in tasks:
             if not task.done():
