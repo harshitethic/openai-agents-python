@@ -129,3 +129,35 @@ async def test_run_producer_consumer_cancels_producer_after_consumer_failure() -
     with pytest.raises(ConsumerError, match="consumer failed"):
         await run_producer_consumer(producer(), consumer())
     assert producer_cancelled.is_set()
+
+
+@pytest.mark.asyncio
+async def test_gather_with_cancel_does_not_suspend_during_generator_exit() -> None:
+    child = asyncio.create_task(asyncio.Event().wait())
+    coro = gather_with_cancel(child)
+    runner = asyncio.create_task(coro)
+    await asyncio.sleep(0)
+
+    try:
+        coro.close()
+    finally:
+        runner.cancel()
+        child.cancel()
+        await asyncio.gather(runner, child, return_exceptions=True)
+
+
+@pytest.mark.asyncio
+async def test_run_producer_consumer_does_not_suspend_during_generator_exit() -> None:
+    producer = asyncio.create_task(asyncio.Event().wait())
+    consumer = asyncio.create_task(asyncio.Event().wait())
+    coro = run_producer_consumer(producer, consumer)
+    runner = asyncio.create_task(coro)
+    await asyncio.sleep(0)
+
+    try:
+        coro.close()
+    finally:
+        runner.cancel()
+        producer.cancel()
+        consumer.cancel()
+        await asyncio.gather(runner, producer, consumer, return_exceptions=True)
