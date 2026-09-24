@@ -720,6 +720,7 @@ def strip_internal_input_item_metadata(item: TResponseInputItem) -> TResponseInp
     cleaned = dict(item)
     cleaned.pop(TOOL_CALL_SESSION_DESCRIPTION_KEY, None)
     cleaned.pop(TOOL_CALL_SESSION_TITLE_KEY, None)
+    cleaned.pop("created_by", None)
     return cast(TResponseInputItem, cleaned)
 
 
