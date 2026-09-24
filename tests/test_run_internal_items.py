@@ -946,6 +946,43 @@ def test_run_item_to_input_item_omits_tool_call_metadata() -> None:
     assert "title" not in result_dict
 
 
+def test_strip_internal_input_item_metadata_strips_created_by() -> None:
+    item = cast(
+        TResponseInputItem,
+        {
+            "type": "compaction",
+            "id": "cmp_123",
+            "encrypted_content": "opaque",
+            "created_by": "server",
+        },
+    )
+
+    cleaned = run_items.strip_internal_input_item_metadata(item)
+
+    assert isinstance(cleaned, dict)
+    assert cleaned["type"] == "compaction"
+    assert cleaned["id"] == "cmp_123"
+    assert cleaned["encrypted_content"] == "opaque"
+    assert "created_by" not in cleaned
+
+
+def test_normalize_input_items_for_api_strips_compaction_created_by() -> None:
+    item = cast(
+        TResponseInputItem,
+        {
+            "type": "compaction",
+            "id": "cmp_123",
+            "encrypted_content": "opaque",
+            "created_by": "server",
+        },
+    )
+
+    normalized = run_items.normalize_input_items_for_api([item])
+
+    assert isinstance(normalized[0], dict)
+    assert "created_by" not in normalized[0]
+
+
 def test_normalize_input_items_for_api_strips_internal_tool_call_metadata() -> None:
     item = cast(
         TResponseInputItem,
