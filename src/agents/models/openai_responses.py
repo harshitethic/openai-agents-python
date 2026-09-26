@@ -262,6 +262,7 @@ class _ResponseStreamWithRequestId:
         "response.completed",
         "response.failed",
         "response.incomplete",
+        "error",
         "response.error",
     }
 

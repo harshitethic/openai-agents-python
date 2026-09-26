@@ -5452,6 +5452,25 @@ async def test_response_stream_closes_source_when_resolved_iterator_close_fails(
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("event_type", ["response.failed", "error"])
+async def test_response_stream_suppresses_cleanup_failure_after_terminal_event(
+    event_type: str,
+) -> None:
+    async def source() -> Any:
+        yield SimpleNamespace(type=event_type)
+
+    async def cleanup() -> None:
+        raise RuntimeError("transport close failed")
+
+    stream = _ResponseStreamWithRequestId(source(), request_id=None, cleanup=cleanup)
+    event = await stream.__anext__()
+    assert getattr(event, "type") == event_type
+
+    with pytest.raises(StopAsyncIteration):
+        await stream.__anext__()
+
+
+@pytest.mark.asyncio
 async def test_response_stream_closes_distinct_source_after_normal_exhaustion() -> None:
     class IterableSource:
         def __init__(self) -> None:
