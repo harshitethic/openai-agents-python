@@ -699,6 +699,27 @@ def test_strip_metadata_and_reasoning_id_helpers_keep_non_matching_items() -> No
     assert run_items._without_reasoning_item_id(non_reasoning) == non_reasoning
     assert run_items._without_reasoning_item_id(reasoning_without_id) == reasoning_without_id
 
+def test_strip_internal_input_item_metadata_removes_provider_created_by() -> None:
+    item = cast(
+        TResponseInputItem,
+        {
+            "type": "compaction",
+            "id": "cmp_123",
+            "encrypted_content": "encrypted",
+            "created_by": "server",
+        },
+    )
+
+    cleaned = run_items.strip_internal_input_item_metadata(item)
+
+    assert cleaned == {
+        "type": "compaction",
+        "id": "cmp_123",
+        "encrypted_content": "encrypted",
+    }
+    assert cast(dict[str, Any], item)["created_by"] == "server"
+
+
 
 def test_deduplicate_input_items_handles_fake_ids_and_approval_request_ids() -> None:
     items: list[Any] = [
