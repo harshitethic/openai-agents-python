@@ -283,7 +283,7 @@ def test_codex_exec_stream_limit_rejects_out_of_range_value() -> None:
 
 @pytest.mark.asyncio
 async def test_codex_exec_run_reports_non_utf8_stderr(monkeypatch: pytest.MonkeyPatch) -> None:
-    stderr = b'\'"node"\' \\xa4\\xa3\\xacO\\xa4\\xba\\xb3\\xa1\\xa9R\\xa5O\\r\\n'
+    stderr = b'"node" ' + bytes([0xA4, 0xA3, 0xAC, 0xA4, 0xBA, 0xB3, 0xA1])
     process = FakeProcess(stdout_lines=[], stderr_chunks=[stderr], returncode=1)
 
     async def fake_create_subprocess_exec(*_args: Any, **_kwargs: Any) -> FakeProcess:
