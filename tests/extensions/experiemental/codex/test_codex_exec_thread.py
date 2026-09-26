@@ -298,7 +298,7 @@ async def test_codex_exec_run_reports_non_utf8_stderr(monkeypatch: pytest.Monkey
     message = str(exc_info.value)
     assert "Codex exec exited with code 1" in message
     assert '"node"' in message
-    assert "\\ufffd" in message
+    assert "�" in message
 
 
 @pytest.mark.asyncio
