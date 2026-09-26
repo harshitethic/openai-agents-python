@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import io
 import signal
+import shutil
 import tarfile
 import threading
 import time
@@ -44,6 +45,63 @@ class _RecordingUnixLocalSession(UnixLocalSandboxSession):
         _ = timeout
         self.exec_commands.append(tuple(str(part) for part in command))
         return ExecResult(stdout=b"", stderr=b"", exit_code=0)
+
+
+@pytest.mark.asyncio
+async def test_unix_local_snapshot_round_trips_hardlinked_files(tmp_path: Path) -> None:
+    workspace = tmp_path / "workspace"
+    cache_file = workspace / "cache" / "module.py"
+    installed_file = workspace / "venv" / "module.py"
+    cache_file.parent.mkdir(parents=True)
+    installed_file.parent.mkdir(parents=True)
+    cache_file.write_text("VALUE = 1\n")
+    os.link(cache_file, installed_file)
+
+    session = _RecordingUnixLocalSession(workspace)
+    snapshot = await session.persist_workspace()
+
+    with tarfile.open(fileobj=snapshot, mode="r:*") as tar:
+        members = {member.name: member for member in tar.getmembers()}
+    assert members["./cache/module.py"].isreg()
+    assert members["./venv/module.py"].isreg()
+    assert not any(member.islnk() for member in members.values())
+
+    snapshot.seek(0)
+    shutil.rmtree(workspace)
+    await session.hydrate_workspace(snapshot)
+
+    assert cache_file.read_text() == "VALUE = 1\n"
+    assert installed_file.read_text() == "VALUE = 1\n"
+
+
+@pytest.mark.asyncio
+async def test_unix_local_snapshot_materializes_hardlink_when_first_path_is_skipped(
+    tmp_path: Path,
+) -> None:
+    workspace = tmp_path / "workspace"
+    skipped_file = workspace / "cache" / "module.py"
+    kept_file = workspace / "venv" / "module.py"
+    skipped_file.parent.mkdir(parents=True)
+    kept_file.parent.mkdir(parents=True)
+    skipped_file.write_text("VALUE = 2\n")
+    os.link(skipped_file, kept_file)
+
+    session = _RecordingUnixLocalSession(workspace)
+    session._runtime_persist_workspace_skip_relpaths.add(Path("cache/module.py"))
+    snapshot = await session.persist_workspace()
+
+    with tarfile.open(fileobj=snapshot, mode="r:*") as tar:
+        members = {member.name: member for member in tar.getmembers()}
+    assert "./cache/module.py" not in members
+    assert members["./venv/module.py"].isreg()
+    assert members["./venv/module.py"].size == len(b"VALUE = 2\n")
+
+    snapshot.seek(0)
+    shutil.rmtree(workspace)
+    await session.hydrate_workspace(snapshot)
+
+    assert not skipped_file.exists()
+    assert kept_file.read_text() == "VALUE = 2\n"
 
 
 @pytest.mark.asyncio
