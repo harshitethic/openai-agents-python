@@ -535,6 +535,26 @@ Use meaningful session IDs that help you organize conversations:
 -   Use encrypted sessions (`EncryptedSession(session_id, underlying_session, encryption_key)`) to wrap any session with transparent encryption and TTL-based expiration
 -   Consider implementing custom session backends for other production systems (for example, Django) for more advanced use cases
 
+### SQLite storage trust boundary
+
+`SQLiteSession` is a persistence mechanism, not a tamper-evident conversation log. A
+file-backed session assumes that the SQLite database file and its containing storage are
+trusted:
+
+-   stored rows are not authenticated or cryptographically bound to their session ID,
+    insertion position, or neighboring rows;
+-   well-formed rows changed outside the SDK can therefore be returned by `get_items()` as
+    ordinary conversation history;
+-   rows whose `message_data` is not valid JSON are skipped rather than treated as an
+    integrity failure.
+
+A session ID selects history; it is not an authorization boundary. Protect the database and
+its backups with the same access controls as the conversation data itself. If your deployment
+places session storage on a shared or otherwise untrusted volume and needs tamper detection,
+use a storage design or custom `Session` implementation that provides the integrity
+guarantees required by your threat model.
+
+
 ### Multiple sessions
 
 ```python

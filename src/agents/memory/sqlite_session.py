@@ -21,6 +21,11 @@ class SQLiteSession(SessionABC):
     This implementation stores conversation history in a SQLite database.
     By default, uses an in-memory database that is lost when the process ends.
     For persistent storage, provide a file path.
+
+    File-backed sessions assume the database and its containing storage are trusted.
+    Stored rows are not authenticated or made tamper-evident, so well-formed external
+    edits can be returned as conversation history. Rows containing invalid JSON are
+    skipped when history is read.
     """
 
     session_settings: SessionSettings | None = None
