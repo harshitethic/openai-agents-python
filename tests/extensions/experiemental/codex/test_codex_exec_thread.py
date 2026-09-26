@@ -282,6 +282,26 @@ def test_codex_exec_stream_limit_rejects_out_of_range_value() -> None:
 
 
 @pytest.mark.asyncio
+async def test_codex_exec_run_reports_non_utf8_stderr(monkeypatch: pytest.MonkeyPatch) -> None:
+    stderr = b'"node" ' + bytes([0xA4, 0xA3, 0xAC, 0xA4, 0xBA, 0xB3, 0xA1])
+    process = FakeProcess(stdout_lines=[], stderr_chunks=[stderr], returncode=1)
+
+    async def fake_create_subprocess_exec(*_args: Any, **_kwargs: Any) -> FakeProcess:
+        return process
+
+    monkeypatch.setattr(exec_module.asyncio, "create_subprocess_exec", fake_create_subprocess_exec)
+
+    exec_client = exec_module.CodexExec(executable_path="/bin/codex")
+    with pytest.raises(RuntimeError) as exc_info:
+        _ = [line async for line in exec_client.run(exec_module.CodexExecArgs(input="hello"))]
+
+    message = str(exc_info.value)
+    assert "Codex exec exited with code 1" in message
+    assert '"node"' in message
+    assert "�" in message
+
+
+@pytest.mark.asyncio
 async def test_codex_exec_run_builds_command_args_and_env(monkeypatch: pytest.MonkeyPatch) -> None:
     captured: dict[str, Any] = {}
     process = FakeProcess(stdout_lines=["line-1\n", "line-2\n"])
