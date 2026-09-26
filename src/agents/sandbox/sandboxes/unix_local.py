@@ -1147,20 +1147,27 @@ class UnixLocalSandboxSession(BaseSandboxSession):
         buf = io.BytesIO()
 
         def _archive_workspace() -> None:
+            def _snapshot_filter(member: tarfile.TarInfo) -> tarfile.TarInfo | None:
+                if should_skip_tar_member(
+                    member.name,
+                    skip_rel_paths=skip,
+                    root_name=None,
+                ):
+                    return None
+
+                if member.islnk():
+                    # Workspace snapshots must round-trip through safe_extract_tarfile(),
+                    # which intentionally rejects hardlink members. Preserve each path's
+                    # contents independently instead. This also handles the case where
+                    # tarfile recorded the first inode path before our filter excluded it.
+                    member.type = tarfile.REGTYPE
+                    member.linkname = ""
+                    member.size = (root / Path(member.name)).stat().st_size
+
+                return member
+
             with tarfile.open(fileobj=buf, mode="w") as tar:
-                tar.add(
-                    root,
-                    arcname=".",
-                    filter=lambda ti: (
-                        None
-                        if should_skip_tar_member(
-                            ti.name,
-                            skip_rel_paths=skip,
-                            root_name=None,
-                        )
-                        else ti
-                    ),
-                )
+                tar.add(root, arcname=".", filter=_snapshot_filter)
 
         try:
             await run_blocking_workspace_io(_archive_workspace)
