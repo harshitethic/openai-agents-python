@@ -1426,6 +1426,36 @@ async def test_invoke_function_tool_timeout_returns_default_message() -> None:
 
 
 @pytest.mark.asyncio
+async def test_late_timeout_preserves_sdk_generated_error_marker(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    @function_tool(timeout=1.0)
+    async def failing_tool() -> str:
+        raise ValueError("boom")
+
+    async def wait_for_after_task_finishes(awaitable: Any, timeout: float | None = None) -> Any:
+        await awaitable
+        raise asyncio.TimeoutError
+
+    monkeypatch.setattr(tool_module.asyncio, "wait_for", wait_for_after_task_finishes)
+
+    ctx = ToolContext(
+        None,
+        tool_name=failing_tool.name,
+        tool_call_id="late-timeout",
+        tool_arguments="{}",
+    )
+    result = await tool_module._invoke_function_tool_with_metadata(
+        function_tool=failing_tool,
+        context=ctx,
+        arguments="{}",
+    )
+
+    assert result.is_sdk_generated_error is True
+    assert result.output == "An error occurred while running the tool. Please try again."
+
+
+@pytest.mark.asyncio
 async def test_invoke_function_tool_timeout_uses_custom_error_function() -> None:
     def custom_timeout_error(_ctx: RunContextWrapper[Any], error: Exception) -> str:
         assert isinstance(error, ToolTimeoutError)
