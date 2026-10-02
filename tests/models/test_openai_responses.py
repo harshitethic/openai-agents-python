@@ -5464,7 +5464,7 @@ async def test_response_stream_suppresses_cleanup_failure_after_terminal_event(
 
     stream = _ResponseStreamWithRequestId(source(), request_id=None, cleanup=cleanup)
     event = await stream.__anext__()
-    assert getattr(event, "type") == event_type
+    assert event.type == event_type
 
     with pytest.raises(StopAsyncIteration):
         await stream.__anext__()
